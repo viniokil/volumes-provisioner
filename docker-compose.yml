@@ -1,0 +1,10 @@
+version: '3.7'
+services:
+  volumes-provisioner:
+    image: viniokil/volumes-provisioner
+    container_name: volumes-provisioner
+    environment:
+      PROVISION_DIRECTORIES: "999:999:0755:/example-dir"
+    volumes:
+      - ./example-dir:/example-dir
+    network_mode: none
