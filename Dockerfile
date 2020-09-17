@@ -11,7 +11,7 @@ WORKDIR /go/src/github.com/viniokil/volumes-provisioner
 
 # ENV GO111MODULE=on
 
-# build & install server
+# build & install app
 RUN go get -u ./... && \
         CGO_ENABLED=0 \
         GOOS=linux \
