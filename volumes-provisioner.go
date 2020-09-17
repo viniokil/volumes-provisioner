@@ -35,6 +35,7 @@ func parseConfig() []dirProperties {
 			log.Debug("Parsed values", "uid: ", uid, ", gid: ", gid, ", mode: ", mode, ", path: ", path)
 
 			var config = dirProperties{uid, gid, mode, path}
+
 			dirsConfig = append(dirsConfig, config)
 
 		}
@@ -46,13 +47,13 @@ func parseConfig() []dirProperties {
 func main() {
 	for _, dir := range parseConfig() {
 		if err := os.Chmod(dir.path, dir.mode); err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		} else {
-			log.Info("chmod dir ", dir.path, " to mode ", dir.mode)
+			log.Info("Chmod dir ", dir.path, " to mode ", dir.mode)
 		}
 
 		if err := os.Chown(dir.path, dir.uid, dir.gid); err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		} else {
 			log.Info("Chown dir ", dir.path, " to mode ", dir.mode)
 		}
