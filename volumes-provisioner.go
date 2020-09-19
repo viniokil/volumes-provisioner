@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -31,7 +32,7 @@ func (d dirProperties) chown() {
 	}
 }
 
-func parseConfig() []dirProperties {
+func parseDirConfig() []dirProperties {
 	var dirsConfig []dirProperties
 
 	envVarVvalue, envVarExist := os.LookupEnv("PROVISION_DIRECTORIES")
@@ -62,13 +63,53 @@ func parseConfig() []dirProperties {
 	return dirsConfig
 }
 
+// logParseFormat takes a string fortmat and returns the Logrus log formtat.
+func logParseFormat(fortmat string) (log.Formatter, error) {
+	switch strings.ToLower(fortmat) {
+	case "json":
+		return &log.JSONFormatter{}, nil
+	case "logfmt":
+		return &log.TextFormatter{DisableColors: true, FullTimestamp: true}, nil
+	case "text":
+		return &log.TextFormatter{FullTimestamp: true}, nil
+	}
+
+	var f log.Formatter
+	return f, fmt.Errorf("not a valid logrus format: %q", fortmat)
+}
+
+// logConfig receives values from environment variables and configures logs
+func logConfig() {
+	level, envVarExist := os.LookupEnv("LOG_LEVEL")
+	if !envVarExist {
+		level = "info"
+	}
+
+	logLevel, err := log.ParseLevel(level)
+	if err != nil {
+		log.Error(err)
+		logLevel = log.DebugLevel
+	}
+	log.SetLevel(logLevel)
+
+	format, envVarExist := os.LookupEnv("LOG_FORMAT")
+	if !envVarExist {
+		format = "text"
+	}
+	logFormat, err := logParseFormat(format)
+	if err != nil {
+		log.Error(err)
+		logFormat = &log.TextFormatter{FullTimestamp: true}
+	}
+	log.SetFormatter(logFormat)
+
+}
+
 func main() {
 
-	log.SetLevel(log.DebugLevel)
-	// log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
-	// log.SetFormatter(&log.JSONFormatter{})
+	logConfig()
 
-	for _, dir := range parseConfig() {
+	for _, dir := range parseDirConfig() {
 		dir.chmod()
 		dir.chown()
 	}

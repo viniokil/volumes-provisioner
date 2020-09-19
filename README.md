@@ -29,7 +29,7 @@ e.g.
 - `1000:1000:0755:/var/www /var/www/html`
 - `1000:1000:0755:/var/www /var/www/html;1001:1001:0755:/var/app /var/app/cache`
 
-#### Local Run example
+### Local Run example
 ```
 docker run --rm \
 -e PROVISION_DIRECTORIES=1000:1000:0755:/var/www \
@@ -37,11 +37,43 @@ docker run --rm \
 viniokil/volumes-provisioner
 ls -dhn data
 ```
+### Loging
+#### Log level
+      # # (Default: ERROR) DEBUG, INFO, WARN, ERROR, FATAL, PANIC
 
-#### Docker Compose prometheus example
+```yaml
+version: '3'
+services:
+  volumes-provisioner:
+    image: viniokil/volumes-provisioner
+    environment:
+      LOG_LEVEL: "DEBUG"
+    volumes:
+      - "/var/data:/var/data"
+    network_mode: none
+```
+
+#### Log format
+Available log formats:
+- text
+- logfmt
+- json
+
+```yaml
+version: '3'
+services:
+  volumes-provisioner:
+    image: viniokil/volumes-provisioner
+    environment:
+      LOG_FORMAT: "json"
+    volumes:
+      - "/var/data:/var/data"
+    network_mode: none
+```
+### Docker Compose prometheus example
 Here using depends_on we make sure directory with correct
 permissions is created before prometheus starts
-```
+```yaml
 version: '2'
 services:
   volumes-provisioner:
@@ -63,8 +95,8 @@ services:
 
 ```
 
-#### Build locally
-```
+### Build locally
+```sh
 docker build -t volumes-provisioner .
 docker run --rm \
 -e PROVISION_DIRECTORIES=1000:1000:0755:/var/www \
@@ -73,5 +105,5 @@ volumes-provisioner
 ls -dhn data
 ```
 
-#### Notes
+### Notes
 Won't work for docker for macos volume mounts
