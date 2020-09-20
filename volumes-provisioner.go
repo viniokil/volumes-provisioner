@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -8,53 +9,108 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type dirConfig struct {
+type dirProperties struct {
 	uid  int
 	gid  int
-	mode int
+	mode os.FileMode
 	path string
 }
 
-func chmod() {
-	if err := os.Chmod("some-filename", 0644); err != nil {
-		log.Fatal(err)
+func (d dirProperties) chmod() {
+	if err := os.Chmod(d.path, d.mode); err != nil {
+		log.Error(err)
+	} else {
+		log.Info("Chmod dir ", d.path, " to mode ", d.mode)
 	}
 }
 
-func chown() {
-	if err := os.Chown("some-filename", 1000, 1000); err != nil {
-		log.Fatal(err)
+func (d dirProperties) chown() {
+	if err := os.Chown(d.path, d.uid, d.gid); err != nil {
+		log.Error(err)
+	} else {
+		log.Info("Chown dir ", d.path, " to uid ", d.uid, " and gid ", d.gid)
 	}
 }
 
-func dirsProperties() []string {
-	var provisionDirectories string = (os.Getenv("PROVISION_DIRECTORIES"))
-	var dirsConfig []string = strings.Split(provisionDirectories, ";")
-	return dirsConfig
-}
+func parseDirConfig() []dirProperties {
+	var dirsConfig []dirProperties
 
-func main() {
-	for _, dir := range dirsProperties() {
+	envVarVvalue, envVarExist := os.LookupEnv("PROVISION_DIRECTORIES")
+	if !envVarExist {
+		return nil
+	}
+
+	var provisionDirConfigs []string = strings.Split(envVarVvalue, ";")
+
+	for _, dir := range provisionDirConfigs {
 		var properties []string = strings.Split(dir, ":")
+
+		log.Debug("Dir properties:", properties)
 
 		uid, _ := strconv.Atoi(properties[0])
 		gid, _ := strconv.Atoi(properties[1])
-		modeUint, _ := strconv.ParseUint(properties[2], 0, 32)
+		modeUint, _ := strconv.ParseUint(properties[2], 8, 32)
 		mode := os.FileMode(modeUint)
 		path := properties[3]
 
-		log.Info("uid: ", uid, ", gid: ", gid, ", mode: ", mode, ", path: ", path)
+		log.Debug("Parsed values", "uid: ", uid, ", gid: ", gid, ", mode: ", mode, ", path: ", path)
 
-		if err := os.Chmod(path, mode); err != nil {
-			log.Fatal(err)
-		}
-		if err := os.Chown(path, uid, gid); err != nil {
-			log.Fatal(err)
-		}
+		var config = dirProperties{uid, gid, mode, path}
+
+		dirsConfig = append(dirsConfig, config)
 	}
 
-	// chmod()
-	// chown()
+	return dirsConfig
+}
 
-	log.Info(dirsProperties())
+// logParseFormat takes a string fortmat and returns the Logrus log formtat.
+func logParseFormat(fortmat string) (log.Formatter, error) {
+	switch strings.ToLower(fortmat) {
+	case "json":
+		return &log.JSONFormatter{}, nil
+	case "logfmt":
+		return &log.TextFormatter{DisableColors: true, FullTimestamp: true}, nil
+	case "text":
+		return &log.TextFormatter{FullTimestamp: true}, nil
+	}
+
+	var f log.Formatter
+	return f, fmt.Errorf("not a valid logrus format: %q", fortmat)
+}
+
+// logConfig receives values from environment variables and configures logs
+func logConfig() {
+	level, envVarExist := os.LookupEnv("LOG_LEVEL")
+	if !envVarExist {
+		level = "info"
+	}
+
+	logLevel, err := log.ParseLevel(level)
+	if err != nil {
+		log.Error(err)
+		logLevel = log.DebugLevel
+	}
+	log.SetLevel(logLevel)
+
+	format, envVarExist := os.LookupEnv("LOG_FORMAT")
+	if !envVarExist {
+		format = "text"
+	}
+	logFormat, err := logParseFormat(format)
+	if err != nil {
+		log.Error(err)
+		logFormat = &log.TextFormatter{FullTimestamp: true}
+	}
+	log.SetFormatter(logFormat)
+
+}
+
+func main() {
+
+	logConfig()
+
+	for _, dir := range parseDirConfig() {
+		dir.chmod()
+		dir.chown()
+	}
 }
