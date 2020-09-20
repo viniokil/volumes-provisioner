@@ -12,10 +12,8 @@ WORKDIR /go/src/github.com/viniokil/volumes-provisioner
 # ENV GO111MODULE=on
 
 # build & install app
-RUN go get -u ./... && \
-        CGO_ENABLED=0 \
-        GOOS=linux \
-        GOARCH=amd64 \
+RUN go get -d -v ./... \
+    && CGO_ENABLED=0 \
         go build -a -ldflags '-w' -o /go/bin/volumes-provisioner
 
 FROM scratch AS final
